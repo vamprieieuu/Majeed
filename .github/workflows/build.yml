@@ -1,0 +1,37 @@
+name: Build MAJEED AE23
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract MAJEED package
+        shell: powershell
+        run: |
+          Expand-Archive -Path "MAJEED_AE23_GitHub_Build.zip" -DestinationPath "package" -Force
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Prepare SDK
+        shell: powershell
+        run: |
+          Copy-Item -Recurse -Force "package/MAJEED_AE23_GitHub_Build/sdk/AfterEffectsSDK/Examples/Headers" "package/MAJEED_AE23_GitHub_Build/Headers"
+
+      - name: Build
+        shell: powershell
+        run: |
+          msbuild "package/MAJEED_AE23_GitHub_Build/MAJEED_AE23/Win/MAJEED.vcxproj" /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Upload AEX
+        uses: actions/upload-artifact@v4
+        with:
+          name: MAJEED-AE23-x64
+          path: "**/MAJEED.aex"
+          if-no-files-found: error
