@@ -18,14 +18,16 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build Release
-        run: cmake --build build --config Release --parallel
+      - name: Build MAJEED target
+        run: cmake --build build --config Release --target MAJEED --parallel
 
       - name: Verify AEX
         shell: pwsh
         run: |
-          $aex = Get-ChildItem -Path build -Filter MAJEED.aex -Recurse | Select-Object -First 1
+          $aex = Get-ChildItem -Path build -Filter MAJEED.aex -Recurse -File | Select-Object -First 1
           if (-not $aex) {
+            Write-Host "MAJEED.aex was not found. Built files:"
+            Get-ChildItem -Path build -Recurse -File | Where-Object { $_.Extension -in '.aex','.dll','.lib','.obj','.rc' } | Select-Object FullName,Length
             Write-Error "MAJEED.aex was not produced."
             exit 1
           }
