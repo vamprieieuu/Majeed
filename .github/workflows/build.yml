@@ -1,4 +1,4 @@
-name: Build MAJEED AE23
+name: Build MAJEED.aex
 
 on:
   workflow_dispatch:
@@ -6,32 +6,35 @@ on:
 jobs:
   build:
     runs-on: windows-2022
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract MAJEED package
-        shell: powershell
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build Release
+        run: cmake --build build --config Release --parallel
+
+      - name: Verify AEX
+        shell: pwsh
         run: |
-          Expand-Archive -Path "MAJEED_AE23_GitHub_Build.zip" -DestinationPath "package" -Force
+          $aex = Get-ChildItem -Path build -Filter MAJEED.aex -Recurse | Select-Object -First 1
+          if (-not $aex) {
+            Write-Error "MAJEED.aex was not produced."
+            exit 1
+          }
+          Write-Host "Built: $($aex.FullName)"
+          Get-Item $aex.FullName | Format-List FullName,Length,LastWriteTime
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Prepare SDK
-        shell: powershell
-        run: |
-          Copy-Item -Recurse -Force "package/MAJEED_AE23_GitHub_Build/sdk/AfterEffectsSDK/Examples/Headers" "package/MAJEED_AE23_GitHub_Build/Headers"
-
-      - name: Build
-        shell: powershell
-        run: |
-          msbuild "package/MAJEED_AE23_GitHub_Build/MAJEED_AE23/Win/MAJEED.vcxproj" /p:Configuration=Release /p:Platform=x64 /m
-
-      - name: Upload AEX
+      - name: Upload MAJEED.aex
         uses: actions/upload-artifact@v4
         with:
-          name: MAJEED-AE23-x64
-          path: "**/MAJEED.aex"
+          name: MAJEED-aex
+          path: build/**/MAJEED.aex
           if-no-files-found: error
